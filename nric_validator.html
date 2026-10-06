@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Singapore NRIC / FIN Validator</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 20px;
+        background: #f5f5f5;
+    }
+
+    .container {
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+        color: #333;
+    }
+
+    input {
+        width: 100%;
+        padding: 12px;
+        font-size: 18px;
+        text-transform: uppercase;
+        box-sizing: border-box;
+    }
+
+    button {
+        margin-top: 12px;
+        padding: 12px 20px;
+        background: #0078d4;
+        color: white;
+        border: none;
+        cursor: pointer;
+        border-radius: 5px;
+    }
+
+    button:hover {
+        background: #005a9e;
+    }
+
+    .valid {
+        color: green;
+        font-weight: bold;
+    }
+
+    .invalid {
+        color: red;
+        font-weight: bold;
+    }
+
+    .details {
+        margin-top: 20px;
+        padding: 15px;
+        background: #fafafa;
+        border-radius: 5px;
+        white-space: pre-wrap;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h2>Singapore NRIC / FIN Validator</h2>
+
+    <input
+        type="text"
+        id="nricInput"
+        placeholder="Enter NRIC/FIN (e.g. S1234567D)"
+        maxlength="9"
+    >
+
+    <button onclick="validateNRIC()">Validate</button>
+
+    <div id="result"></div>
+    <div id="details" class="details"></div>
+</div>
+
+<script>
+function validateNRIC() {
+
+    const input = document.getElementById("nricInput").value.trim().toUpperCase();
+    const resultDiv = document.getElementById("result");
+    const detailsDiv = document.getElementById("details");
+
+    resultDiv.innerHTML = "";
+    detailsDiv.textContent = "";
+
+    // Format validation
+    const pattern = /^[STFGM]\d{7}[A-Z]$/;
+
+    if (!pattern.test(input)) {
+        resultDiv.innerHTML =
+            '<p class="invalid">❌ Invalid Format</p>';
+
+        detailsDiv.textContent =
+            "Format Requirements:\n" +
+            "- Exactly 9 characters\n" +
+            "- Starts with S, T, F, G, or M\n" +
+            "- Followed by 7 digits\n" +
+            "- Ends with a letter";
+        return;
+    }
+
+    const prefix = input.charAt(0);
+    const digits = input.substring(1, 8);
+    const providedChecksum = input.charAt(8);
+
+    const weights = [2, 7, 6, 5, 4, 3, 2];
+
+    let sum = 0;
+    let calculationSteps = [];
+
+    for (let i = 0; i < 7; i++) {
+        const digit = parseInt(digits[i], 10);
+        const product = digit * weights[i];
+
+        sum += product;
+
+        calculationSteps.push(
+            `${digit} × ${weights[i]} = ${product}`
+        );
+    }
+
+    let offset = 0;
+
+    switch (prefix) {
+        case "T":
+        case "G":
+            offset = 4;
+            break;
+
+        case "M":
+            offset = 3;
+            break;
+
+        default:
+            offset = 0;
+    }
+
+    sum += offset;
+
+    const remainder = sum % 11;
+
+    let checksumTable;
+
+    if (prefix === "S" || prefix === "T") {
+        checksumTable =
+            ['J','Z','I','H','G','F','E','D','C','B','A'];
+    }
+    else if (prefix === "F" || prefix === "G") {
+        checksumTable =
+            ['X','W','U','T','R','P','N','M','L','K','J'];
+    }
+    else if (prefix === "M") {
+        checksumTable =
+            ['K','L','J','N','P','Q','R','T','U','W','X'];
+    }
+
+    const expectedChecksum = checksumTable[remainder];
+
+    const isValid = providedChecksum === expectedChecksum;
+
+    let typeDescription = "";
+
+    switch (prefix) {
+        case "S":
+            typeDescription =
+                "Citizen/PR (issued before 2000)";
+            break;
+
+        case "T":
+            typeDescription =
+                "Citizen/PR (issued from 2000 onwards)";
+            break;
+
+        case "F":
+            typeDescription =
+                "Foreigner (issued before 2000)";
+            break;
+
+        case "G":
+            typeDescription =
+                "Foreigner (issued from 2000 onwards)";
+            break;
+
+        case "M":
+            typeDescription =
+                "Foreigner (issued from 2022 onwards)";
+            break;
+    }
+
+    if (isValid) {
+        resultDiv.innerHTML =
+            '<p class="valid">✅ VALID NRIC / FIN</p>';
+    } else {
+        resultDiv.innerHTML =
+            '<p class="invalid">❌ INVALID NRIC / FIN</p>';
+    }
+
+    detailsDiv.textContent =
+`Document Type:
+${typeDescription}
+
+Prefix:
+${prefix}
+
+Digits:
+${digits}
+
+Calculation:
+${calculationSteps.join('\n')}
+
+Offset Added:
+${offset}
+
+Total Sum:
+${sum}
+
+Remainder (mod 11):
+${remainder}
+
+Expected Checksum:
+${expectedChecksum}
+
+Provided Checksum:
+${providedChecksum}
+
+Validation Result:
+${isValid ? 'VALID' : 'INVALID'}`;
+}
+</script>
+
+</body>
+</html>
